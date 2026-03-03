@@ -1,0 +1,33 @@
+[08:35:36.225] === PLUGIN_INIT ===
+[08:35:36.225] PLUGIN_INIT complete
+[08:35:47.026] window.open: class='kitty'
+[08:35:47.026] resolveIconPath: looking up 'kitty'
+[08:35:47.026] resolveIconPath: found desktop file: /usr/share/applications/kitty.desktop
+[08:35:47.027] resolveIconPath: Icon=kitty
+[08:35:47.029] loadPNG: loading /usr/share/icons/hicolor/256x256/apps/kitty.png
+[08:35:47.030] loadPNG: loaded 256x256 texture from /usr/share/icons/hicolor/256x256/apps/kitty.png
+[08:35:47.030] icon: 'kitty' -> /usr/share/icons/hicolor/256x256/apps/kitty.png
+[08:35:47.030] launch: started animation for 'kitty' (pending: 1)
+[08:35:49.071] faded: 'kitty'
+[08:36:09.867] window.open: class='firefox'
+[08:36:09.867] resolveIconPath: looking up 'firefox'
+[08:36:09.867] resolveIconPath: found desktop file: /usr/share/applications/firefox.desktop
+[08:36:09.867] resolveIconPath: Icon=firefox
+[08:36:09.867] loadPNG: loading /usr/share/icons/hicolor/48x48/apps/firefox.png
+[08:36:09.867] loadPNG: loaded 48x48 texture from /usr/share/icons/hicolor/48x48/apps/firefox.png
+[08:36:09.868] icon: 'firefox' -> /usr/share/icons/hicolor/48x48/apps/firefox.png
+[08:36:09.868] launch: started animation for 'firefox' (pending: 1)
+[08:36:11.897] faded: 'firefox'
+[08:36:23.211] window.open: class='firefox'
+[08:36:23.213] resolveIconPath: looking up 'firefox'
+[08:36:23.213] resolveIconPath: cache hit for 'firefox' → /usr/share/icons/hicolor/48x48/apps/firefox.png
+[08:36:23.213] icon: 'firefox' -> /usr/share/icons/hicolor/48x48/apps/firefox.png
+[08:36:23.213] launch: started animation for 'firefox' (pending: 1)
+[08:36:25.225] faded: 'firefox'
+[08:36:25.372] === PLUGIN_EXIT ===
+[08:36:40.716] window.open: class='kitty'
+[08:36:40.717] resolveIconPath: looking up 'kitty'
+[08:36:40.717] resolveIconPath: cache hit for 'kitty' → /usr/share/icons/hicolor/256x256/apps/kitty.png
+[08:36:40.717] icon: 'kitty' -> /usr/share/icons/hicolor/256x256/apps/kitty.png
+[08:36:40.717] launch: started animation for 'kitty' (pending: 1)
+[08:36:42.740] faded: 'kitty'

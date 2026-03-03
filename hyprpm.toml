@@ -1,0 +1,13 @@
+[repository]
+name = "hyprloading"
+authors = ["mal"]
+
+[hyprloading]
+description = "Startup notification with bouncing app icon near cursor"
+authors = ["mal"]
+output = "hyprloading.so"
+build = [
+    "cmake -B build -G Ninja",
+    "ninja -C build",
+    "cp build/libhyprloading.so hyprloading.so",
+]
