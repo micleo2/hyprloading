@@ -51,8 +51,6 @@ static void onNewLaunch(const std::string& appId) {
     entry.fadingOut = false;
 
     g_pendingLaunches.push_back(std::move(entry));
-    logToFile(std::format("launch: '{}' icon={}", appId, iconPath.value_or("(none)")));
-
     // Damage to trigger first render
     for (auto& mon : g_pCompositor->m_monitors)
         g_pCompositor->scheduleFrameForMonitor(mon);
@@ -195,7 +193,11 @@ static void onRenderStage(eRenderStage stage) {
     }
 }
 
-// Do NOT change this function.
+// Hyprland's plugin API macros (APICALL EXPORT) apply C linkage to these
+// entry points, but they return C++ types (std::string, PLUGIN_DESCRIPTION_INFO).
+// This is safe in practice since only Hyprland loads these symbols as C++ anyway.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
 APICALL EXPORT std::string PLUGIN_API_VERSION() {
     return HYPRLAND_API_VERSION;
 }
@@ -212,8 +214,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
         throw std::runtime_error("[hyprloading] Version mismatch");
     }
 
-    logToFile("=== PLUGIN_INIT ===");
-
     HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:enabled", Hyprlang::INT{1});
     HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:icon_size", Hyprlang::INT{32});
     HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:bounce_height", Hyprlang::INT{10});
@@ -227,14 +227,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     static auto P1 = Event::bus()->m_events.window.open.listen([&](PHLWINDOW w) { onWindowOpen(w); });
     static auto P2 = Event::bus()->m_events.render.stage.listen([&](eRenderStage stage) { onRenderStage(stage); });
 
-    logToFile("PLUGIN_INIT complete");
-
     HyprlandAPI::addNotification(PHANDLE, "[hyprloading] Loaded successfully!", CHyprColor{0.2, 1.0, 0.2, 1.0}, 3000);
 
     return {"hyprloading", "Startup notification with bouncing app icon", "mal", "0.1"};
 }
+#pragma GCC diagnostic pop
 
 APICALL EXPORT void PLUGIN_EXIT() {
-    logToFile("=== PLUGIN_EXIT ===");
     g_pendingLaunches.clear();
 }
