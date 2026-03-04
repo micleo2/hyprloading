@@ -1,0 +1,10 @@
+Add launch-prefix to fuzzel config for hyprloading integration.
+Update the path to match where hyprloading-launch is installed.
+
+--- a/fuzzel.ini
++++ b/fuzzel.ini
+@@ -1,4 +1,5 @@
+ [main]
++launch-prefix=/path/to/hyprloading/scripts/hyprloading-launch
+
+ [border]

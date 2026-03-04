@@ -1,0 +1,9 @@
+ninja: Entering directory `nasignore/rel/'
+[1/2] Building CXX object CMakeFiles/hyprloading.dir/src/main.cpp.o
+FAILED: [code=1] CMakeFiles/hyprloading.dir/src/main.cpp.o 
+/usr/bin/clang++ -Dhyprloading_EXPORTS -isystem /var/cache/hyprpm/mal/headersRoot/include -isystem /var/cache/hyprpm/mal/headersRoot/include/hyprland/protocols -isystem /var/cache/hyprpm/mal/headersRoot/include/hyprland -isystem /usr/include/libdrm -isystem /usr/include/pango-1.0 -isystem /usr/include/cairo -isystem /usr/include/libmount -isystem /usr/include/blkid -isystem /usr/include/fribidi -isystem /usr/include/harfbuzz -isystem /usr/include/freetype2 -isystem /usr/include/libpng16 -isystem /usr/include/glib-2.0 -isystem /usr/lib/glib-2.0/include -isystem /usr/include/sysprof-6 -isystem /usr/include/pixman-1 -O3 -DNDEBUG -std=gnu++23 -fPIC -pthread -MD -MT CMakeFiles/hyprloading.dir/src/main.cpp.o -MF CMakeFiles/hyprloading.dir/src/main.cpp.o.d -o CMakeFiles/hyprloading.dir/src/main.cpp.o -c /home/mal/creative-synced/programming/hyprloading/src/main.cpp
+/home/mal/creative-synced/programming/hyprloading/src/main.cpp:15:10: fatal error: 'hyprland/src/event/EventBus.hpp' file not found
+   15 | #include <hyprland/src/event/EventBus.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+ninja: build stopped: subcommand failed.

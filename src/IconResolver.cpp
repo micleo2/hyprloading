@@ -1,11 +1,10 @@
 #include "IconResolver.hpp"
-#include "globals.hpp"
 
+#include <vector>
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
 #include <cstdlib>
-#include <format>
 
 namespace fs = std::filesystem;
 
@@ -41,31 +40,17 @@ static const std::vector<std::string> ICON_EXTENSIONS = {
 };
 
 std::optional<std::string> CIconResolver::resolveIconPath(const std::string& appId, int size) {
-    logToFile(std::format("resolveIconPath: looking up '{}'", appId));
-
-    // Check cache first
     auto it = m_cache.find(appId);
-    if (it != m_cache.end()) {
-        logToFile(std::format("resolveIconPath: cache hit for '{}' → {}", appId, it->second));
+    if (it != m_cache.end())
         return it->second;
-    }
 
-    // Step 1: Find the .desktop file and extract Icon= value
     auto desktopPath = resolveDesktopFile(appId);
-    if (!desktopPath) {
-        logToFile(std::format("resolveIconPath: no .desktop file for '{}'", appId));
+    if (!desktopPath)
         return std::nullopt;
-    }
-
-    logToFile(std::format("resolveIconPath: found desktop file: {}", *desktopPath));
 
     auto iconName = parseIconFromDesktop(*desktopPath);
-    if (!iconName) {
-        logToFile(std::format("resolveIconPath: no Icon= in {}", *desktopPath));
+    if (!iconName)
         return std::nullopt;
-    }
-
-    logToFile(std::format("resolveIconPath: Icon={}", *iconName));
 
     // Step 2: If icon is an absolute path, use directly
     if (iconName->starts_with("/")) {

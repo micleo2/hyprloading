@@ -1,6 +1,5 @@
 #define WLR_USE_UNSTABLE
 
-#include <unistd.h>
 #include <vector>
 
 #include <hyprland/src/includes.hpp>
@@ -28,67 +27,86 @@ static std::vector<LaunchEntry> g_pendingLaunches;
 static CIconResolver            g_iconResolver;
 static CIconCache               g_iconCache;
 
-// ─── window open → start animation ─────────────────────────────────────────
-static void onWindowOpen(PHLWINDOW window) {
-    static const auto PENABLED = CConfigValue<Hyprlang::INT>("plugin:hyprloading:enabled");
+// ─── start animation for an app ─────────────────────────────────────────────
+static void onNewLaunch(const std::string& appId) {
+    static const auto PENABLED  = CConfigValue<Hyprlang::INT>("plugin:hyprloading:enabled");
+    static const auto PICONSIZE = CConfigValue<Hyprlang::INT>("plugin:hyprloading:icon_size");
     if (!*PENABLED)
         return;
 
+    // Don't duplicate if already pending for this app
+    for (auto& entry : g_pendingLaunches) {
+        if (entry.appId == appId && !entry.fadingOut)
+            return;
+    }
+
+    auto         iconPath = g_iconResolver.resolveIconPath(appId, *PICONSIZE);
+    SP<CTexture> texture  = iconPath ? g_iconCache.getTexture(*iconPath) : nullptr;
+
+    LaunchEntry entry;
+    entry.appId     = appId;
+    entry.texture   = texture;
+    entry.startTime = std::chrono::steady_clock::now();
+    entry.opacity   = 0.f;
+    entry.fadingOut = false;
+
+    g_pendingLaunches.push_back(std::move(entry));
+    logToFile(std::format("launch: '{}' icon={}", appId, iconPath.value_or("(none)")));
+
+    // Damage to trigger first render
+    for (auto& mon : g_pCompositor->m_monitors)
+        g_pCompositor->scheduleFrameForMonitor(mon);
+}
+
+// ─── dispatcher: hyprloading:launch <app_id> ────────────────────────────────
+static SDispatchResult dispatchLaunch(std::string arg) {
+    while (!arg.empty() && arg.front() == ' ') arg.erase(arg.begin());
+    while (!arg.empty() && arg.back() == ' ') arg.pop_back();
+
+    if (arg.empty())
+        return {.success = false, .error = "hyprloading:launch requires an app name"};
+
+    onNewLaunch(arg);
+    return {};
+}
+
+// ─── window open → fade out matching animation ─────────────────────────────
+static void onWindowOpen(PHLWINDOW window) {
     std::string wClass = window->m_initialClass;
     if (wClass.empty())
         wClass = window->m_class;
     if (wClass.empty())
         return;
 
-    logToFile(std::format("window.open: class='{}'", wClass));
+    if (g_pendingLaunches.empty())
+        return;
 
-    // If there's a pending launch for this class, mark it for fade-out
     for (auto& entry : g_pendingLaunches) {
+        if (entry.fadingOut)
+            continue;
+
         std::string eLower = entry.appId;
         std::string wLower = wClass;
         std::transform(eLower.begin(), eLower.end(), eLower.begin(), ::tolower);
         std::transform(wLower.begin(), wLower.end(), wLower.begin(), ::tolower);
 
-        bool matched = (entry.appId == wClass) || (eLower == wLower);
+        bool matched = (eLower == wLower);
         if (!matched) {
             auto dot = eLower.rfind('.');
             if (dot != std::string::npos && eLower.substr(dot + 1) == wLower)
                 matched = true;
         }
+        if (!matched) {
+            auto dot = wLower.rfind('.');
+            if (dot != std::string::npos && wLower.substr(dot + 1) == eLower)
+                matched = true;
+        }
 
         if (matched) {
-            logToFile(std::format("match: '{}' already pending, fading out", wClass));
             entry.fadingOut = true;
             return;
         }
     }
-
-    // New window — start a brief bouncing icon animation
-    static const auto PICONSIZE = CConfigValue<Hyprlang::INT>("plugin:hyprloading:icon_size");
-    auto              iconPath  = g_iconResolver.resolveIconPath(wClass, *PICONSIZE);
-
-    SP<CTexture> texture = nullptr;
-    if (iconPath) {
-        texture = g_iconCache.getTexture(*iconPath);
-        logToFile(std::format("icon: '{}' -> {}", wClass, *iconPath));
-    } else {
-        logToFile(std::format("icon: '{}' not found", wClass));
-    }
-
-    LaunchEntry entry;
-    entry.appId     = wClass;
-    entry.texture   = texture;
-    entry.startTime = std::chrono::steady_clock::now();
-    entry.opacity   = 0.f;
-    // Auto fade-out after appearing (since the window is already here)
-    entry.fadingOut = false;
-
-    g_pendingLaunches.push_back(std::move(entry));
-    logToFile(std::format("launch: started animation for '{}' (pending: {})", wClass, g_pendingLaunches.size()));
-
-    // Damage to trigger first render
-    for (auto& mon : g_pCompositor->m_monitors)
-        g_pCompositor->scheduleFrameForMonitor(mon);
 }
 
 // ─── rendering + animation ──────────────────────────────────────────────────
@@ -107,13 +125,13 @@ static void onRenderStage(eRenderStage stage) {
     static const auto POFFSET_Y     = CConfigValue<Hyprlang::INT>("plugin:hyprloading:icon_offset_y");
     static const auto PBOUNCEHEIGHT = CConfigValue<Hyprlang::INT>("plugin:hyprloading:bounce_height");
     static const auto PBOUNCEPERIOD = CConfigValue<Hyprlang::INT>("plugin:hyprloading:bounce_period");
+    static const auto PTIMEOUT      = CConfigValue<Hyprlang::INT>("plugin:hyprloading:timeout");
 
     Vector2D cursorPos = g_pPointerManager->position();
     auto     now       = std::chrono::steady_clock::now();
     bool     needsDamage = false;
 
-    // Show for 2 seconds then fade out
-    static constexpr long SHOW_MS    = 2000;
+    long     timeoutMs  = *PTIMEOUT;
     static constexpr long FADE_IN_MS = 150;
     static constexpr long FADE_OUT_MS = 400;
 
@@ -121,8 +139,8 @@ static void onRenderStage(eRenderStage stage) {
         auto& entry   = g_pendingLaunches[i];
         long  elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - entry.startTime).count();
 
-        // After SHOW_MS, start fading out
-        if (!entry.fadingOut && elapsed > SHOW_MS)
+        // After timeout, start fading out (safety net if window never matches)
+        if (!entry.fadingOut && elapsed > timeoutMs)
             entry.fadingOut = true;
 
         // Fade in
@@ -131,7 +149,6 @@ static void onRenderStage(eRenderStage stage) {
         } else {
             entry.opacity -= 1.f / ((float)FADE_OUT_MS / 16.f);
             if (entry.opacity <= 0.f) {
-                logToFile(std::format("faded: '{}'", entry.appId));
                 g_pendingLaunches.erase(g_pendingLaunches.begin() + i);
                 continue;
             }
@@ -203,6 +220,9 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:bounce_period", Hyprlang::INT{600});
     HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:icon_offset_x", Hyprlang::INT{16});
     HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:icon_offset_y", Hyprlang::INT{16});
+    HyprlandAPI::addConfigValue(PHANDLE, "plugin:hyprloading:timeout", Hyprlang::INT{30000});
+
+    HyprlandAPI::addDispatcherV2(PHANDLE, "hyprloading:launch", dispatchLaunch);
 
     static auto P1 = Event::bus()->m_events.window.open.listen([&](PHLWINDOW w) { onWindowOpen(w); });
     static auto P2 = Event::bus()->m_events.render.stage.listen([&](eRenderStage stage) { onRenderStage(stage); });

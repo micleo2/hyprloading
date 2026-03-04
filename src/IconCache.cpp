@@ -1,5 +1,4 @@
 #include "IconCache.hpp"
-#include "globals.hpp"
 
 #include <cairo/cairo.h>
 #include <hyprland/src/render/OpenGL.hpp>
@@ -23,11 +22,8 @@ SP<CTexture> CIconCache::getTexture(const std::string& iconPath) {
 }
 
 SP<CTexture> CIconCache::loadPNG(const std::string& path) {
-    logToFile(std::format("loadPNG: loading {}", path));
-
     auto surface = cairo_image_surface_create_from_png(path.c_str());
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
-        logToFile(std::format("loadPNG: cairo error for {}", path));
         cairo_surface_destroy(surface);
         return nullptr;
     }
@@ -54,8 +50,6 @@ SP<CTexture> CIconCache::loadPNG(const std::string& path) {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     tex->m_size = {w, h};
-
-    logToFile(std::format("loadPNG: loaded {}x{} texture from {}", w, h, path));
 
     cairo_surface_destroy(surface);
     return tex;
